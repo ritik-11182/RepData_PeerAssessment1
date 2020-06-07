@@ -1,25 +1,96 @@
 ---
-title: "Reproducible Research: Peer Assessment 1"
+title: "PA1_template.Rmd"
 output: 
   html_document:
     keep_md: true
 ---
 
+## LOADING AND PREPROCESSING DATA
+Pull out the file activity.csv to read, explore and analyse!!
+``` {r read, cache =TRUE, echo = TRUE}
+activity <- read.csv("activity.csv")
+str(activity)
+summary(activity)
+```
+### Loading the data
+``` {r loads, echo = TRUE}
+library(plyr)
+library(lattice)
+library(ggplot2)
+```
+### Processing and Cleaning the data
+``` {r process , echo = TRUE}
+activity$day <- weekdays(as.Date(activity$date))
+clean <- activity[!is.na(activity$steps), ]
+```
+## AVERAGE STEPS PER DAY PATTERN
+### Creating the aggregate function
+``` {r code, echo= TRUE}
+sumsteps <- aggregate(activity$steps~activity$date, FUN = sum)
+colnames(sumsteps) <- c("dates", "Steps")
+head(sumsteps)
+```
 
-## Loading and preprocessing the data
+### Histogram plot
+```{r plot1, echo=TRUE}
+hist(sumsteps$Steps, ylab = "", xlab = "Total steps", breaks = 5, col = "orange", main = "TOTAL STEPS PER DAY")
+abline(v = median(sumsteps$Steps), lty = 2, lwd = 2.5, col = "red")
+abline(v = mean(sumsteps$Steps), lty = 3, lwd =2.5, col = "blue")
+legend("topright", legend = c("median","mean"), col = c("red","blue"), lty = 2, lwd = 2.5)
+```
+### Report the mean and median of the dataset
+``` {r stats,echo= TRUE}
+mean(sumsteps$Steps)
+median(sumsteps$Steps)
+```
+## Time series plot of the average steps taken using ggplot
+### Make a ggplot pattern
+``` {r timeplot, echo = TRUE}
+intervals <- ddply(clean, .(interval), summarize, Avg =  mean(steps))
+ggplot(intervals, aes(interval, Avg, col = "red")) + ggtitle("AVERAGE NO.OF STEPS PER DAY") +
+  geom_line() + labs(x = "Time Interval", y = "Average steps")
+```
 
+### The 5-minute interval that, on average, contains the maximum number of steps???
+``` {r max, echo = TRUE}
+maximum <- max(intervals$Avg)
+intervals[intervals$Avg == maximum, 1]
+```
+## Impute missing values
+### Calculate total number of missing values??
+``` {r roe, echo = TRUE}
+nrow(activity[is.na(activity$steps), ])
+```
+My strategy for filling out the NA values is to replace those values with the average steps per day on the basis of interval and day!!
+```{r strat,echo= TRUE}
+avgsteps <- ddply(clean, .(interval,day), summarize, Avg = mean(steps))
+na <- activity[is.na(activity$steps), ]
+new <- merge(na, avgsteps, by = c("interval", "day"))
+head(new)
+new2 <-new[ , c(5,4,1,2)]
+colnames(new2) <- c("steps", "date", "interval", "day")
+data <- rbind(clean, new2)
+head(data)
+```
+### Histogram plot for imputed and non imputed values
+```{r impute, echo=TRUE}
+sumsteps2 <- aggregate(data$steps~data$date, FUN = sum)
+colnames(sumsteps2) <- c("date","Steps")
+mean(sumsteps2$Steps)
+median(sumsteps2$Steps)
+hist(sumsteps2$Steps, xlab = "steps", ylab = "", main ='IMPUTED AND NON IMPUTED DATA',col = "green")
+hist(sumsteps$Steps, xlab = "steps", ylab = "", main ='IMPUTED AND NON IMPUTED DATA',col = "yellow", add = T)
+legend("topright", legend = c("imputed data", "non imputed data"), lty = 1, lwd =2.5, col = c("green","yellow"))
+```
 
+## Comparing the average number of steps taken per 5-minute interval across weekdays and weekends
+``` {r panel, echo= TRUE}
+data$daycategory <- ifelse(data$day %in% c("Saturday", "Sunday"), "weekend", "weekday")
+intervals <- ddply(data, .(interval,daycategory), summarize, Avg = mean(steps))
+head(intervals)
+```
+### Lattice plot
+``` {r lattice, echo= TRUE}
+xyplot(Avg~interval|daycategory, data = intervals,type = "l", layout = c(1,2), xlab ="interval", ylab = "steps average", main = "Average steps difference pattern")
+```
 
-## What is mean total number of steps taken per day?
-
-
-
-## What is the average daily activity pattern?
-
-
-
-## Imputing missing values
-
-
-
-## Are there differences in activity patterns between weekdays and weekends?
