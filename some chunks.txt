@@ -1,0 +1,48 @@
+library(plyr)
+nrow(activity[is.na(activity$steps), ])
+activity$day <- weekdays(as.Date(activity$date))
+clean <- activity[!is.na(activity$steps) , ]
+avgsteps <- ddply(clean, .(interval,day), summarize, Avg = mean(steps))
+na <- activity[is.na(activity$steps), ]
+new <- merge(na, avgsteps, by = c("interval", "day"))
+
+new2 <-new[ , c(5,4,1,2)]
+colnames(new2) <- c("steps", "date", "interval", "day")
+data <- rbind(clean, new2)
+
+sumsteps2 <- aggregate(data$steps~data$date, FUN = sum)
+colnames(sumsteps2) <- c("date","Steps")
+mean(sumsteps2$Steps)
+median(sumsteps2$Steps)
+hist(sumsteps2$Steps, xlab = "steps", ylab = "", main ='IMPUTED AND NON IMPUTED DATA',col = "green")
+hist(sumsteps$Steps, xlab = "steps", ylab = "", main ='IMPUTED AND NON IMPUTED DATA',col = "yellow", add = T)
+legend("topright", legend = c("imputed data", "non imputed data"), lty = 1, lwd =2.5, col = c("green","yellow"))
+
+activity <- read.csv("activity.csv")
+sumsteps <- aggregate(activity$steps~activity$date, FUN = sum)
+colnames(sumsteps) <- c("dates", "Steps")
+png("histplot.png")
+hist(sumsteps$Steps, ylab = "", xlab = "Total steps", breaks = 5, col = "orange", main = "TOTAL STEPS PER DAY")
+abline(v = median(sumsteps$Steps), lty = 2, lwd = 2.5, col = "red")
+abline(v = mean(sumsteps$Steps), lty = 3, lwd =2.5, col = "blue")
+legend("topright", legend = c("median","mean"), col = c("red","blue"), lty = 2, lwd = 2.5)
+dev.off()
+
+mean(sumsteps$Steps)
+median(sumsteps$Steps)
+
+library(plyr)
+library(ggplot2)
+activity <- read.csv("activity.csv")
+clean <- activity[!is.na(activity$steps), ]
+intervals <- ddply(clean, .(interval), summarize, Avg =  mean(steps))
+png("ggplot.png")
+ggplot(intervals, aes(interval, Avg, col = "red")) + ggtitle("AVERAGE NO.OF STEPS PER DAY") +
+  geom_line() + labs(x = "Time Interval", y = "Average steps")
+dev.off()
+
+
+maximum <- max(intervals$Avg)
+intervals[intervals$Avg == maximum, 1]
+
+
